@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#081018" />
+  <meta name="description" content="Aetherfall — a high-definition pixel-art open-world action RPG. Forge a hero, explore living biomes, hunt bosses, and gather the dawnstones." />
+  <title>Aetherfall — A Pixelbound Open World</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23081018'/%3E%3Cpath d='M16 4l11 12-11 12L5 16z' fill='%23e9b85f'/%3E%3Cpath d='M16 9l6 7-6 7-6-7z' fill='%23081018'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <div id="game">
+    <div id="viewport" aria-label="Aetherfall game world"></div>
+    <div id="atmosphere" aria-hidden="true">
+      <div class="vignette"></div>
+      <div class="scanlines"></div>
+      <div id="weather-tint"></div>
+      <div id="rain-glass"></div>
+      <div id="damage-flash"></div>
+    </div>
+
+    <div id="hud" class="hidden" aria-live="polite">
+      <header class="hud-top">
+        <section class="hero-card">
+          <div class="hero-portrait" id="hero-portrait">
+            <span id="hero-glyph">♞</span>
+            <i class="portrait-level" id="portrait-level">1</i>
+          </div>
+          <div class="hero-meta">
+            <div class="hero-line">
+              <strong id="hero-name">Wanderer</strong>
+              <span id="hero-subtitle">Human Warrior</span>
+            </div>
+            <div class="meter health-meter" data-meter="health">
+              <div class="meter-fill" id="health-fill"></div>
+              <span class="meter-label"><b id="health-text">150 / 150</b><em>VIT</em></span>
+            </div>
+            <div class="meter energy-meter" data-meter="energy">
+              <div class="meter-fill" id="energy-fill"></div>
+              <span class="meter-label"><b id="energy-text">55 / 55</b><em>SPR</em></span>
+            </div>
+            <div class="xp-line">
+              <span>EXP</span>
+              <div class="xp-track"><div id="xp-fill"></div></div>
+              <b id="xp-text">0 / 120</b>
+            </div>
+          </div>
+        </section>
+
+        <section class="world-card">
+          <div class="world-ribbon">
+            <span id="zone-name">Hearthvale</span>
+            <span class="ribbon-dot">◆</span>
+            <span id="biome-name">Verdant Reach</span>
+          </div>
+          <div class="world-time">
+            <span id="weather-icon">☀</span>
+            <span id="clock">09:12</span>
+            <span id="weather-name">Clear skies</span>
+          </div>
+          <div class="compass" aria-hidden="true"><span>N</span><span>E</span><span>S</span><span>W</span></div>
+        </section>
+
+        <section class="right-hud">
+          <div class="coin-purse"><span class="coin">◉</span> <b id="gold-text">60</b> <small>gold</small></div>
+          <div class="quest-tracker">
+            <div class="tracker-title"><span>FIELD NOTES</span><button type="button" data-open="journal" title="Open quest journal (J)">J</button></div>
+            <div id="quest-tracker-list"></div>
+          </div>
+        </section>
+      </header>
+
+      <div id="boss-bar" class="boss-bar hidden">
+        <div class="boss-heading"><span id="boss-title">A great presence stirs...</span><span id="boss-level">Lv. 5</span></div>
+        <div class="boss-track"><div id="boss-fill"></div><div class="boss-notches"></div></div>
+        <div id="boss-element" class="boss-element">EARTH</div>
+      </div>
+
+      <div id="status-effects" class="status-effects"></div>
+
+      <div id="toast-stack" class="toast-stack"></div>
+      <div id="zone-banner" class="zone-banner"><span class="zone-kicker">NOW ENTERING</span><strong></strong><small></small></div>
+      <div id="interact-prompt" class="interact-prompt hidden"><kbd>E</kbd><span id="interact-label">Speak</span></div>
+
+      <div class="bottom-hud">
+        <div class="hotbar" aria-label="Actions">
+          <button type="button" class="hot-slot attack-slot" data-action="attack" title="Basic attack (Left Click)">
+            <span id="attack-icon" class="hot-icon">⚔</span><kbd>LMB</kbd><i class="cooldown" id="cd-attack"></i>
+          </button>
+          <button type="button" class="hot-slot ability-slot" data-action="ability" title="Class ability (F)">
+            <span id="ability-icon" class="hot-icon">✹</span><kbd>F</kbd><i class="cooldown" id="cd-ability"></i>
+          </button>
+          <button type="button" class="hot-slot" data-action="potion" title="Health draught (R)">
+            <span class="hot-icon">♜</span><kbd>R</kbd><i class="potion-count" id="potion-count">3</i>
+          </button>
+          <button type="button" class="hot-slot" data-action="dodge" title="Dodge (Space)">
+            <span class="hot-icon">»</span><kbd>␣</kbd><i class="cooldown" id="cd-dodge"></i>
+          </button>
+          <button type="button" class="hot-slot utility-slot" data-open="inventory" title="Inventory (I)">
+            <span class="hot-icon">▤</span><kbd>I</kbd>
+          </button>
+          <button type="button" class="hot-slot utility-slot" data-open="journal" title="Quest journal (J)">
+            <span class="hot-icon">✎</span><kbd>J</kbd>
+          </button>
+        </div>
+        <div class="control-hint"><span>WASD</span> move · <span>Drag</span> camera · <span>E</span> interact · <span>M</span> map</div>
+      </div>
+
+      <aside class="minimap-shell">
+        <div class="minimap-top"><span id="minimap-zone">VERDANT REACH</span><b id="minimap-coords">0, 0</b></div>
+        <canvas id="minimap" width="196" height="196"></canvas>
+        <div class="minimap-compass">N</div>
+        <button type="button" class="map-expand" data-open="map" title="World map (M)">⌗</button>
+      </aside>
+
+      <div class="mobile-controls" id="mobile-controls">
+        <div class="joystick" id="joystick"><div class="joystick-knob" id="joystick-knob"></div><span>MOVE</span></div>
+        <div class="touch-actions">
+          <button type="button" class="touch-btn touch-interact" data-action="interact">E<small>USE</small></button>
+          <button type="button" class="touch-btn touch-ability" data-action="ability">✹<small>SKILL</small></button>
+          <button type="button" class="touch-btn touch-attack" data-action="attack">⚔<small>STRIKE</small></button>
+          <button type="button" class="touch-btn touch-dodge" data-action="dodge">»<small>DODGE</small></button>
+          <button type="button" class="touch-btn touch-potion" data-action="potion">♜<b id="touch-potion-count">3</b><small>BREW</small></button>
+        </div>
+      </div>
+
+      <div class="corner-actions">
+        <button type="button" class="icon-button" data-open="inventory" aria-label="Inventory">▤</button>
+        <button type="button" class="icon-button" data-open="journal" aria-label="Quest journal">✎</button>
+        <button type="button" class="icon-button" data-open="pause" aria-label="Menu">☰</button>
+      </div>
+    </div>
+
+    <main id="creator" class="creator">
+      <div class="creator-scrim" aria-hidden="true"></div>
+      <div class="creator-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+      <header class="brand">
+        <span class="brand-kicker">THE SUNDERED REALMS PRESENT</span>
+        <h1>AETHER<span>FALL</span></h1>
+        <p>A pixelbound open world · Forge a soul. Break the long night.</p>
+      </header>
+
+      <section class="creation-panel identity-panel" aria-label="Character identity">
+        <div class="panel-heading"><span>01</span><div><small>THE VESSEL</small><h2>Identity</h2></div></div>
+        <label class="field-label" for="hero-name-input">Traveller's name</label>
+        <div class="name-field"><input id="hero-name-input" maxlength="18" value="Rowan" autocomplete="off" spellcheck="false" /><button type="button" id="random-name" title="Random name">⟳</button></div>
+
+        <span class="field-label">Sex</span>
+        <div class="segmented" id="sex-picker">
+          <button type="button" data-sex="feminine" class="active">Feminine</button>
+          <button type="button" data-sex="masculine">Masculine</button>
+        </div>
+
+        <span class="field-label">Bloodline</span>
+        <div class="race-grid" id="race-picker">
+          <button type="button" class="race-card active" data-race="human">
+            <span class="race-sigil">⚜</span><b>Human</b><small>Adaptable</small>
+          </button>
+          <button type="button" class="race-card" data-race="angel">
+            <span class="race-sigil">✦</span><b>Angel</b><small>Radiant</small>
+          </button>
+          <button type="button" class="race-card" data-race="demon">
+            <span class="race-sigil">☽</span><b>Demon</b><small>Infernal</small>
+          </button>
+          <button type="button" class="race-card" data-race="beast">
+            <span class="race-sigil">❖</span><b>Beast</b><small>Wildkin</small>
+          </button>
+        </div>
+        <div class="beast-picker hidden" id="beast-picker">
+          <span>Beast kin</span>
+          <div class="segmented">
+            <button type="button" data-beast="dog" class="active">Dog</button>
+            <button type="button" data-beast="cat">Cat</button>
+          </div>
+        </div>
+
+        <div class="swatch-row">
+          <span class="field-label">Skin</span>
+          <div class="swatches" id="skin-picker">
+            <button type="button" data-skin="0" style="--swatch:#f0c8a3" class="active" aria-label="Skin tone 1"></button>
+            <button type="button" data-skin="1" style="--swatch:#d39b74" aria-label="Skin tone 2"></button>
+            <button type="button" data-skin="2" style="--swatch:#a96e4f" aria-label="Skin tone 3"></button>
+            <button type="button" data-skin="3" style="--swatch:#754737" aria-label="Skin tone 4"></button>
+            <button type="button" data-skin="4" style="--swatch:#e7e0d1" aria-label="Ashen skin"></button>
+          </div>
+          <span class="field-label">Garb</span>
+          <div class="swatches" id="cloth-picker">
+            <button type="button" data-cloth="0" style="--swatch:#426e70" class="active" aria-label="Garb teal"></button>
+            <button type="button" data-cloth="1" style="--swatch:#7b3f45" aria-label="Garb crimson"></button>
+            <button type="button" data-cloth="2" style="--swatch:#3f4f83" aria-label="Garb indigo"></button>
+            <button type="button" data-cloth="3" style="--swatch:#6b5732" aria-label="Garb ochre"></button>
+            <button type="button" data-cloth="4" style="--swatch:#4d5644" aria-label="Garb moss"></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="creation-panel path-panel" aria-label="Character class">
+        <div class="panel-heading"><span>02</span><div><small>THE PATH</small><h2>Calling</h2></div></div>
+        <div class="class-list" id="class-picker">
+          <button type="button" class="class-card active" data-class="warrior">
+            <span class="class-icon">⚔</span><span class="class-copy"><b>Warrior</b><small>Steel and staying power</small></span><em>VIT ★★★★</em>
+          </button>
+          <button type="button" class="class-card" data-class="rogue">
+            <span class="class-icon">†</span><span class="class-copy"><b>Rogue</b><small>Quick blades, quicker exits</small></span><em>AGI ★★★★★</em>
+          </button>
+          <button type="button" class="class-card" data-class="archer">
+            <span class="class-icon">➶</span><span class="class-copy"><b>Archer</b><small>The wild answers your call</small></span><em>RNG ★★★★★</em>
+          </button>
+          <button type="button" class="class-card" data-class="wizard">
+            <span class="class-icon">✧</span><span class="class-copy"><b>Wizard</b><small>Bend the elements to will</small></span><em>ARC ★★★★★</em>
+          </button>
+          <button type="button" class="class-card" data-class="priest">
+            <span class="class-icon">✟</span><span class="class-copy"><b>Priest</b><small>Mercy is a kind of weapon</small></span><em>SPR ★★★★★</em>
+          </button>
+        </div>
+
+        <div class="hero-summary">
+          <div class="summary-title"><span>LIVE ATTRIBUTES</span><b id="summary-class">Warrior</b></div>
+          <div class="stat-line"><span>Attack</span><div class="stat-track"><i id="stat-atk"></i></div><b id="stat-atk-value">16</b></div>
+          <div class="stat-line"><span>Vitality</span><div class="stat-track"><i id="stat-hp"></i></div><b id="stat-hp-value">150</b></div>
+          <div class="stat-line"><span>Agility</span><div class="stat-track"><i id="stat-spd"></i></div><b id="stat-spd-value">6.0</b></div>
+          <div class="stat-line"><span>Spirit</span><div class="stat-track"><i id="stat-en"></i></div><b id="stat-en-value">55</b></div>
+          <p id="race-perk" class="race-perk"><b>Human Versatility</b> — +12% experience and +10% gold found.</p>
+        </div>
+      </section>
+
+      <div class="creator-center" aria-hidden="true">
+        <div class="preview-tag"><span>◆</span> SOUL PREVIEW <span>◆</span></div>
+        <div class="preview-name" id="preview-name">Rowan</div>
+        <div class="preview-role" id="preview-role">HUMAN · WARRIOR</div>
+      </div>
+
+      <footer class="creator-footer">
+        <div class="world-pitch"><span class="pitch-icon">✦</span><p><b>Seven biomes. One long night.</b> Hunt biome-born beasts, break old puzzles, and gather the dawnstones before the Cinder Crown wakes.</p></div>
+        <div class="start-wrap">
+          <button type="button" id="start-button" class="start-button" aria-label="Start game">Start</button>
+          <span>Press <kbd>Enter</kbd> to begin · progress saves locally</span>
+        </div>
+        <div class="feature-chips"><span>◆ Online-free</span><span>◆ Controller & touch</span><span>◆ Autosave</span></div>
+      </footer>
+    </main>
+
+    <div id="modal-backdrop" class="modal-backdrop hidden"></div>
+
+    <section id="dialogue-modal" class="game-modal hidden" role="dialog" aria-modal="true" aria-label="Conversation">
+      <div class="dialogue-card">
+        <button class="modal-close" type="button" data-close>×</button>
+        <div class="speaker">
+          <div class="speaker-portrait" id="speaker-portrait">✦</div>
+          <div><small id="speaker-title">KEEPER OF EMBERS</small><h2 id="speaker-name">Elder Maren</h2></div>
+          <span class="speaker-zone" id="speaker-zone">HEARTHVALE</span>
+        </div>
+        <p class="dialogue-line" id="dialogue-line"></p>
+        <div class="quest-ribbon hidden" id="dialogue-quest">
+          <span class="quest-mark">!</span>
+          <div><small id="quest-kicker">NEW QUEST</small><b id="quest-title">Wolves at the Woodline</b><p id="quest-objective"></p></div>
+        </div>
+        <div class="dialogue-rewards hidden" id="dialogue-rewards"></div>
+        <div class="dialogue-actions" id="dialogue-actions"></div>
+      </div>
+    </section>
+
+    <section id="vendor-modal" class="game-modal wide hidden" role="dialog" aria-modal="true" aria-label="Shop">
+      <div class="shop-card">
+        <button class="modal-close" type="button" data-close>×</button>
+        <header class="shop-header">
+          <div><small id="shop-kicker">WARES OF HEARTHVALE</small><h2 id="shop-name">Bram's Anvil</h2></div>
+          <div class="shop-purse"><span>◉</span> <b id="shop-gold">60</b></div>
+        </header>
+        <div class="shop-tabs" id="shop-tabs"></div>
+        <div class="shop-grid" id="shop-grid"></div>
+        <footer class="shop-footer"><span id="shop-hint">Every blade is forged to your level. Equipment is class-bound.</span><button type="button" class="pixel-button" data-close>Leave shop</button></footer>
+      </div>
+    </section>
+
+    <section id="journal-modal" class="game-modal wide hidden" role="dialog" aria-modal="true" aria-label="Quest journal">
+      <div class="journal-card">
+        <button class="modal-close" type="button" data-close>×</button>
+        <header class="ledger-header"><small>THE TRAVELLER'S LEDGER</small><h2>Field Notes</h2><p>Every promise made in Aetherfall is written here.</p></header>
+        <div class="journal-body">
+          <div class="journal-column"><h3>ACTIVE OATHS <span id="active-quest-count">0</span></h3><div id="journal-active" class="journal-list"></div></div>
+          <div class="journal-column"><h3>COMPLETED <span id="completed-quest-count">0</span></h3><div id="journal-completed" class="journal-list compact"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="inventory-modal" class="game-modal wide hidden" role="dialog" aria-modal="true" aria-label="Inventory">
+      <div class="inventory-card">
+        <button class="modal-close" type="button" data-close>×</button>
+        <header class="ledger-header"><small>PACK & PANOPLY</small><h2>Inventory</h2><p id="inventory-summary">Class-bound relics and field supplies.</p></header>
+        <div class="inventory-body">
+          <div class="equipment-column"><h3>EQUIPPED</h3><div id="equipment-slots" class="equipment-slots"></div><div class="inventory-stats" id="inventory-stats"></div></div>
+          <div class="pack-column"><div class="pack-heading"><h3>SATCHEL</h3><span id="inventory-gold">◉ 60</span></div><div id="inventory-grid" class="inventory-grid"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="map-modal" class="game-modal map-modal hidden" role="dialog" aria-modal="true" aria-label="World map">
+      <div class="world-map-card">
+        <button class="modal-close" type="button" data-close>×</button>
+        <header><small>THE SUNDERED REALMS</small><h2>World Map</h2><p>Click the map to place a waypoint. The wilds are not safe after dusk.</p></header>
+        <div class="world-map-wrap"><canvas id="world-map" width="760" height="760"></canvas><div class="map-legend"><span class="legend-meadow">◆ Meadow</span><span class="legend-forest">◆ Forest</span><span class="legend-volcano">◆ Volcano</span><span class="legend-beach">◆ Coast</span><span class="legend-grave">◆ Graveyard</span><span class="legend-cave">◆ Cave</span><span class="legend-town">✦ Town</span></div></div>
+      </div>
+    </section>
+
+    <section id="pause-modal" class="game-modal hidden" role="dialog" aria-modal="true" aria-label="Menu">
+      <div class="pause-card">
+        <small>THE WORLD HOLDS ITS BREATH</small>
+        <h2>Paused</h2>
+        <p>Aetherfall waits. Your journey is saved whenever you rest at a shrine.</p>
+        <div class="pause-stats" id="pause-stats"></div>
+        <div class="pause-actions">
+          <button type="button" class="pixel-button gold" data-close>Return to world</button>
+          <button type="button" class="pixel-button" id="save-button">Save progress</button>
+          <button type="button" class="pixel-button muted" id="new-hero-button">Forge a new hero</button>
+        </div>
+        <div class="settings-row">
+          <button type="button" id="sound-toggle" class="toggle active">♫ Music on</button>
+          <button type="button" id="quality-toggle" class="toggle active">▦ Pixel filter</button>
+        </div>
+        <div class="controls-grid">
+          <span><kbd>WASD</kbd> Move</span><span><kbd>Mouse</kbd> Look / strike</span><span><kbd>F</kbd> Class skill</span><span><kbd>R</kbd> Potion</span><span><kbd>Space</kbd> Dodge</span><span><kbd>E</kbd> Interact</span><span><kbd>M</kbd> Map</span><span><kbd>I</kbd> Inventory</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="death-modal" class="game-modal death hidden" role="dialog" aria-modal="true" aria-label="Defeated">
+      <div class="death-card">
+        <span class="death-sigil">☠</span>
+        <small>THE THREAD SNAPS</small>
+        <h2>You have fallen</h2>
+        <p id="death-message">The dawnstone pulls your soul back toward Hearthvale.</p>
+        <div class="death-timer"><i id="death-ring"></i><b id="death-count">4</b></div>
+        <button type="button" class="pixel-button gold" id="respawn-button">Return to shrine</button>
+      </div>
+    </section>
+
+    <div id="level-up" class="level-up hidden" aria-live="assertive">
+      <span class="level-rays"></span><small>THE SOUL GROWS</small><strong>LEVEL <b id="level-up-number">2</b></strong><p id="level-up-detail">Vitality restored · New power unlocked</p>
+    </div>
+
+    <div id="fatal-error" class="fatal-error hidden" role="alert">
+      <h2>The veil failed to lift.</h2>
+      <p id="fatal-message">Your browser could not start the 3D renderer.</p>
+      <button type="button" onclick="location.reload()" class="pixel-button">Try again</button>
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
